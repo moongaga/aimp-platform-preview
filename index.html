@@ -1085,6 +1085,36 @@ body{
 .empty-state .empty-text{font-size:14px;margin-bottom:6px;}
 .empty-state .empty-sub{font-size:12px;}
 
+/* ── Notification Dropdown ── */
+.notif-overlay{display:none;position:fixed;inset:0;z-index:150;}
+.notif-overlay.show{display:block;}
+.notif-dropdown{display:none;position:absolute;top:52px;right:120px;width:420px;max-height:520px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 12px 40px rgba(0,0,0,0.15);z-index:151;overflow:hidden;flex-direction:column;}
+.notif-dropdown.show{display:flex;}
+.notif-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.notif-header h3{font-size:14px;margin:0;padding:0;border:none;}
+.notif-tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border-light);}
+.notif-tab{padding:4px 12px;border-radius:12px;font-size:11px;cursor:pointer;color:var(--text-muted);transition:var(--transition);}
+.notif-tab:hover,.notif-tab.active{background:var(--accent-bg);color:var(--accent-light);}
+.notif-list{flex:1;overflow-y:auto;max-height:380px;}
+.notif-item{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;transition:var(--transition);}
+.notif-item:hover{background:var(--bg-hover);}
+.notif-item.unread{background:var(--accent-bg);}
+.notif-item .nf-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.nf-icon.approval{background:var(--amber-bg);color:var(--amber);}
+.nf-icon.alert{background:var(--red-bg);color:var(--red);}
+.nf-icon.system{background:var(--accent-bg);color:var(--accent-light);}
+.nf-icon.success{background:var(--green-bg);color:var(--green);}
+.notif-item .nf-content{flex:1;min-width:0;}
+.notif-item .nf-title{font-size:12px;font-weight:600;line-height:1.4;}
+.notif-item .nf-desc{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.notif-item .nf-time{font-size:10px;color:var(--text-muted);margin-top:2px;}
+.notif-item .nf-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:6px;}
+.notif-item.read .nf-dot{background:transparent;}
+.notif-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:13px;}
+
+.bell-btn{position:relative;}
+.bell-badge{position:absolute;top:-2px;right:-2px;width:16px;height:16px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.bell-badge:empty{display:none;}
 /* ── Loading skeleton ── */
 .skeleton{background:linear-gradient(90deg,var(--bg-root) 25%,var(--bg-hover) 50%,var(--bg-root) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -1342,9 +1372,49 @@ body{
     <div class="topbar-title" id="pageTitle">📊 运营仪表盘</div>
     <div class="topbar-actions">
       <input class="search-box" id="globalSearch" placeholder="🔍 Ctrl+K 搜索Agent、Skill、Tool、知识库、产品..." onkeyup="handleGlobalSearch(event)">
-      <button class="btn" title="通知中心">🔔</button>
+      <button class="btn bell-btn" title="通知中心" onclick="toggleNotifications()">🔔<span class="bell-badge" id="bellBadge">3</span></button>
       <button class="btn" title="交互指南 (快捷键 ?)" onclick="openGuide()">📖</button>
-      <button class="btn primary" onclick="openNewAgentModal();showToast('新建Agent弹窗已打开','info')">+ 新建 Agent</button>
+    </div>
+  </div>
+
+  <!-- ═══════ NOTIFICATION DROPDOWN ═══════ -->
+  <div class="notif-overlay" id="notifOverlay" onclick="closeNotifications()"></div>
+  <div class="notif-dropdown" id="notifDropdown">
+    <div class="notif-header">
+      <h3>🔔 消息通知</h3>
+      <span style="font-size:11px;color:var(--text-muted);cursor:pointer;" onclick="markAllRead()">全部已读</span>
+    </div>
+    <div class="notif-tabs">
+      <div class="notif-tab active" onclick="filterNotif('all',this)">全部</div>
+      <div class="notif-tab" onclick="filterNotif('approval',this)">审批</div>
+      <div class="notif-tab" onclick="filterNotif('alert',this)">告警</div>
+      <div class="notif-tab" onclick="filterNotif('system',this)">系统</div>
+    </div>
+    <div class="notif-list" id="notifList">
+      <div class="notif-item unread" data-type="approval" onclick="handleNotifClick(this,'agents')">
+        <div class="nf-icon approval">📋</div><div class="nf-content"><div class="nf-title">升级提案待审批</div><div class="nf-desc">#UP-2026-0042 Token销售商业化提前</div><div class="nf-time">10分钟前</div></div><div class="nf-dot"></div>
+      </div>
+      <div class="notif-item unread" data-type="alert" onclick="handleNotifClick(this,'ticket-system')">
+        <div class="nf-icon alert">🚨</div><div class="nf-content"><div class="nf-title">P0工单超时预警</div><div class="nf-desc">#TKT-0710 Prompt注入漏洞 · SLA剩余8分钟</div><div class="nf-time">15分钟前</div></div><div class="nf-dot"></div>
+      </div>
+      <div class="notif-item unread" data-type="system" onclick="handleNotifClick(this,'agent-testing')">
+        <div class="nf-icon system">🧪</div><div class="nf-content"><div class="nf-title">测试报告生成完成</div><div class="nf-desc">内容生成Agent v3.0.3-RC1 预发布测试 · 192/200通过</div><div class="nf-time">25分钟前</div></div><div class="nf-dot"></div>
+      </div>
+      <div class="notif-item" data-type="system" onclick="handleNotifClick(this,'dynamic-plan')">
+        <div class="nf-icon success">✅</div><div class="nf-content"><div class="nf-title">工作流执行完成</div><div class="nf-desc">线索转化提升工作流 · 8Agent协同 · 3m24s</div><div class="nf-time">38分钟前</div></div><div class="nf-dot"></div>
+      </div>
+      <div class="notif-item" data-type="alert" onclick="handleNotifClick(this,'ticket-system')">
+        <div class="nf-icon alert">⚠️</div><div class="nf-content"><div class="nf-title">数据漂移告警</div><div class="nf-desc">咨询时间段PSI=0.31 超标 · 已自动创建工单</div><div class="nf-time">1小时前</div></div><div class="nf-dot"></div>
+      </div>
+      <div class="notif-item" data-type="approval" onclick="handleNotifClick(this,'agents')">
+        <div class="nf-icon approval">📋</div><div class="nf-content"><div class="nf-title">Agent上线门禁待签核</div><div class="nf-desc">编排引擎 v2.1.5 并发安全加固 · 灰度10%→50%</div><div class="nf-time">2小时前</div></div><div class="nf-dot"></div>
+      </div>
+      <div class="notif-item" data-type="system">
+        <div class="nf-icon success">🔔</div><div class="nf-content"><div class="nf-title">竞品动态提醒</div><div class="nf-desc">数说故事发布"基点计划2.0" · 建议关注Token商业化</div><div class="nf-time">2小时前</div></div><div class="nf-dot"></div>
+      </div>
+      <div class="notif-item" data-type="system">
+        <div class="nf-icon system">🔄</div><div class="nf-content"><div class="nf-title">知识库索引更新完成</div><div class="nf-desc">全量重索引2,340篇 · Agent检索命中率恢复至89.3%</div><div class="nf-time">3小时前</div></div><div class="nf-dot"></div>
+      </div>
     </div>
   </div>
 
@@ -1492,6 +1562,7 @@ body{
           <option>全部状态</option><option>在线</option><option>降级</option><option>离线</option><option>训练中</option>
         </select>
         <span style="color:var(--text-muted);margin-left:auto;font-size:13px;">共 24 个 Agent</span>
+        <button class="btn primary" style="font-size:12px;" onclick="openNewAgentModal()">+ 新建 Agent</button>
       </div>
 
       <div class="panel">
@@ -7557,6 +7628,50 @@ dpTabs.forEach(tab => {
 
   requestAnimationFrame(animate);
 })();
+
+// ── Notification Center ──
+function toggleNotifications() {
+  var dd = document.getElementById('notifDropdown');
+  var ov = document.getElementById('notifOverlay');
+  var show = !dd.classList.contains('show');
+  dd.classList.toggle('show', show);
+  ov.classList.toggle('show', show);
+}
+function closeNotifications() {
+  document.getElementById('notifDropdown').classList.remove('show');
+  document.getElementById('notifOverlay').classList.remove('show');
+}
+function markAllRead() {
+  document.querySelectorAll('.notif-item.unread').forEach(function(item) {
+    item.classList.remove('unread');
+    item.querySelector('.nf-dot').style.background = 'transparent';
+  });
+  updateBellBadge();
+  showToast('已全部标记为已读', 'success');
+}
+function updateBellBadge() {
+  var count = document.querySelectorAll('.notif-item.unread').length;
+  var badge = document.getElementById('bellBadge');
+  if (badge) { badge.textContent = count > 0 ? count : ''; }
+}
+function filterNotif(type, tab) {
+  document.querySelectorAll('.notif-tab').forEach(function(t) { t.classList.remove('active'); });
+  tab.classList.add('active');
+  document.querySelectorAll('.notif-item').forEach(function(item) {
+    item.style.display = (type === 'all' || item.dataset.type === type) ? 'flex' : 'none';
+  });
+}
+function handleNotifClick(item, targetTab) {
+  item.classList.remove('unread');
+  var dot = item.querySelector('.nf-dot');
+  if (dot) dot.style.background = 'transparent';
+  updateBellBadge();
+  closeNotifications();
+  if (targetTab) {
+    var nav = document.querySelector('.nav-item[data-tab="'+targetTab+'"]');
+    if (nav) nav.click();
+  }
+}
 
 // ── Toast Notification System ──
 function showToast(msg, type) {

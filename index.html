@@ -114,6 +114,9 @@ body{
 
 .content{flex:1;overflow-y:auto;padding:24px;}
 .content-section{display:none;}
+.dash-panel{display:none;}
+.dash-panel.active{display:block;}
+.content-section.active{display:block;}
 .content-section.active{display:block;}
 
 /* ── Cards & Grids ── */
@@ -1051,6 +1054,32 @@ body{
 
 @media(max-width:900px){.workspace-layout{grid-template-columns:1fr;}.ws-sidebar{display:none;}.chat-msg{max-width:95%;}}
 
+/* ── Task Center ── */
+.task-kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0;}
+.task-col{background:var(--bg-root);border-radius:var(--radius-sm);padding:12px;min-height:200px;}
+.task-col h4{font-size:11px;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;display:flex;justify-content:space-between;}
+.task-col h4 span{color:var(--text-primary);}
+.task-card-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;cursor:pointer;transition:var(--transition);font-size:12px;}
+.task-card-item:hover{border-color:var(--accent);box-shadow:var(--shadow);}
+.task-card-item .tc-title{font-weight:600;margin-bottom:4px;}
+.task-card-item .tc-meta{font-size:10px;color:var(--text-muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.task-card-item .tc-priority{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.tc-priority.p0{background:var(--red);}
+.tc-priority.p1{background:var(--amber);}
+.tc-priority.p2{background:var(--accent);}
+.tc-assignee{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:500;}
+.tc-assignee.human{background:var(--purple-bg);color:var(--purple);}
+.tc-assignee.agent{background:var(--green-bg);color:var(--green);}
+.task-detail-row{display:flex;justify-content:space-between;padding:5px 0;font-size:11px;border-bottom:1px solid var(--border-light);}
+.task-detail-row:last-child{border-bottom:none;}
+.task-detail-row .td-label{color:var(--text-muted);}
+.task-detail-row .td-val{font-weight:600;}
+.task-timeline{font-size:11px;margin:8px 0;}
+.task-timeline .tt-item{display:flex;gap:8px;padding:4px 0;border-left:2px solid var(--border);padding-left:8px;margin-left:4px;}
+.task-timeline .tt-item .tt-time{color:var(--text-muted);font-size:10px;min-width:40px;}
+.task-timeline .tt-item .tt-desc{color:var(--text2);}
+@media(max-width:900px){.task-kanban{grid-template-columns:repeat(2,1fr);}}
+
 /* ── Toast Notifications ── */
 .toast-container{position:fixed;top:20px;right:20px;z-index:500;display:flex;flex-direction:column;gap:8px;}
 .toast{padding:12px 18px;border-radius:8px;font-size:13px;font-weight:500;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.2);animation:toastIn 0.3s ease;max-width:380px;display:flex;align-items:center;gap:8px;cursor:pointer;}
@@ -1191,9 +1220,20 @@ body{
 
 <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
 <aside class="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-icon">⚡</div>
-    <div class="logo-text">AIMP<span> 管控平台</span></div>
+  <div class="sidebar-logo" style="flex-direction:column;align-items:flex-start;gap:6px;padding:12px 14px;">
+    <div style="display:flex;align-items:center;gap:8px;width:100%;">
+      <div class="logo-icon" style="min-width:28px;width:28px;height:28px;font-size:14px;">⚡</div>
+      <div class="logo-text" style="font-size:14px;">AIMP<span> 管控平台</span></div>
+    </div>
+    <select id="versionSwitcher" onchange="switchVersion(this.value)" style="width:100%;padding:5px 8px;background:var(--bg-root);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:11px;cursor:pointer;">
+      <option value="v1">AIMP v1.0</option>
+      <option value="v2">AIMP v2.0</option>
+      <option value="v3">AIMP v3.0</option>
+      <option value="v4">AIMP v4.0</option>
+      <option value="v5">AIMP v5.0</option>
+      <option value="v6">AIMP v6.0</option>
+      <option value="v7" selected>AIMP v7.0</option>
+    </select>
   </div>
   <nav class="sidebar-nav">
     <div class="nav-section">
@@ -1201,6 +1241,10 @@ body{
       <div class="nav-item" data-tab="workspace">
         <span class="nav-icon">💬</span> 工作空间
         <span class="badge pulse" style="background:var(--green-bg);color:var(--green);">●</span>
+      </div>
+      <div class="nav-item" data-tab="task-center">
+        <span class="nav-icon">📋</span> 任务中心
+        <span class="badge">8</span>
       </div>
     </div>
     <div class="nav-section">
@@ -1422,130 +1466,167 @@ body{
 
     <!-- ═══════════════ DASHBOARD ═══════════════ -->
     <section class="content-section active" id="tab-dashboard">
-      <!-- Stat cards -->
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">已注册 Agent</span>
-            <span class="stat-icon">🤖</span>
+      <!-- Perspective Switcher -->
+      <div style="display:flex;align-items:center;gap:0;margin-bottom:18px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;overflow:hidden;width:fit-content;">
+        <div class="dash-perspective-btn active" onclick="switchDashPerspective('biz',this)" style="padding:8px 24px;cursor:pointer;font-size:13px;font-weight:600;border-radius:20px;transition:0.2s;">📊 业务运营视角</div>
+        <div class="dash-perspective-btn" onclick="switchDashPerspective('dev',this)" style="padding:8px 24px;cursor:pointer;font-size:13px;font-weight:600;border-radius:20px;transition:0.2s;">🧪 AI开发与训练视角</div>
+      </div>
+
+      <!-- ═══════ BUSINESS VIEW ═══════ -->
+      <div class="dash-panel active" id="dash-biz">
+        <!-- KPI row -->
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-header"><span class="stat-label">线索转化率</span><span class="stat-icon">🎯</span></div>
+            <div class="stat-value" style="color:var(--green);">5.2%</div>
+            <div class="stat-change up">↑ 0.8% vs 上月 · 目标 5.0% ✓</div>
           </div>
-          <div class="stat-value">24</div>
-          <div class="stat-change up">↑ 5 本月新增</div>
+          <div class="stat-card">
+            <div class="stat-header"><span class="stat-label">本月RaaS收入</span><span class="stat-icon">💰</span></div>
+            <div class="stat-value">¥186.5万</div>
+            <div class="stat-change up">↑ 22% vs 上月 · RaaS占比 42%</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header"><span class="stat-label">客服CSAT</span><span class="stat-icon">⭐</span></div>
+            <div class="stat-value" style="color:var(--green);">4.82</div>
+            <div class="stat-change up">↑ 0.12 · 品牌方A:4.85 · B:4.78</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header"><span class="stat-label">本月GMV(商城)</span><span class="stat-icon">🛒</span></div>
+            <div class="stat-value">¥3,920万</div>
+            <div class="stat-change up">↑ 15% · 年目标 4.7亿 · 进度 83%</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Agent 日均调用量</span>
-            <span class="stat-icon">⚡</span>
+
+        <!-- Business panels -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <!-- Customer KPIs -->
+          <div class="panel">
+            <div class="panel-header"><h3>🏢 品牌方KPI达成率</h3></div>
+            <div class="panel-body" style="padding:0;">
+              <table class="data-table">
+                <thead><tr><th>品牌方</th><th>模式</th><th>线索转化率</th><th>CSAT</th><th>SLA达标</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td>品牌方 A</td><td><span class="tag purple">RaaS</span></td><td style="color:var(--green);">5.2% ✓</td><td>4.82 ✓</td><td>97.8% ✓</td><td><span class="tag green">● 正常</span></td></tr>
+                  <tr><td>品牌方 B</td><td><span class="tag blue">SaaS+驻场</span></td><td style="color:var(--amber);">4.2% ⚠</td><td>4.35</td><td>95.8%</td><td><span class="tag amber">● 关注</span></td></tr>
+                  <tr><td>品牌方 C</td><td><span class="tag purple">RaaS试点</span></td><td>— (部署中)</td><td>—</td><td>—</td><td><span class="tag blue">● 部署中</span></td></tr>
+                  <tr><td>经销商集团 D</td><td><span class="tag blue">SaaS</span></td><td>3.1%</td><td>—</td><td>92.4%</td><td><span class="tag amber">● 待复审</span></td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="stat-value">187,632</div>
-          <div class="stat-change up">↑ 12.4% vs 昨日</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Agent 自主完成率</span>
-            <span class="stat-icon">🎯</span>
+
+          <!-- Content & KOC metrics -->
+          <div class="panel">
+            <div class="panel-header"><h3>📱 内容与KOC运营指标</h3></div>
+            <div class="panel-body" style="padding:0;">
+              <table class="data-table">
+                <thead><tr><th>指标</th><th>今日</th><th>昨日</th><th>7日趋势</th></tr></thead>
+                <tbody>
+                  <tr><td>内容产出量</td><td><strong>127条</strong></td><td>145条</td><td><span class="tag green">↑ 8%</span></td></tr>
+                  <tr><td>内容互动率</td><td><strong>4.2%</strong></td><td>3.9%</td><td><span class="tag green">↑ 0.3%</span></td></tr>
+                  <tr><td>KOC发帖量</td><td><strong>12篇</strong></td><td>15篇</td><td><span class="tag amber">↓ 20%</span></td></tr>
+                  <tr><td>KOC触达人数</td><td><strong>48万</strong></td><td>52万</td><td><span style="color:var(--text-muted);">→ 持平</span></td></tr>
+                  <tr><td>内容合规通过率</td><td><strong>98.4%</strong></td><td>97.2%</td><td><span class="tag green">↑ 1.2%</span></td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="stat-value">73.8%</div>
-          <div class="stat-change up">↑ 3.2% vs 上周</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">月均成本节省</span>
-            <span class="stat-icon">💰</span>
+
+          <!-- Revenue breakdown -->
+          <div class="panel">
+            <div class="panel-header"><h3>💵 收入构成分析</h3></div>
+            <div class="panel-body">
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>RaaS 按结果付费</span><span style="color:var(--purple);font-weight:700;">¥78.3万 (42%)</span></div><div class="progress-bar"><div class="progress-fill" style="width:42%;background:var(--purple);"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>SaaS License</span><span style="color:var(--accent-light);font-weight:700;">¥65.2万 (35%)</span></div><div class="progress-bar"><div class="progress-fill blue" style="width:35%;"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>驻场运营服务</span><span style="color:var(--amber);font-weight:700;">¥28.0万 (15%)</span></div><div class="progress-bar"><div class="progress-fill amber" style="width:15%;"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>Token销售</span><span style="color:var(--green);font-weight:700;">¥15.0万 (8%)</span></div><div class="progress-bar"><div class="progress-fill green" style="width:8%;"></div></div></div>
+              </div>
+              <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px;">本月总收入: <strong style="color:var(--text-primary);">¥186.5万</strong> · RaaS占比目标 50% (年底)</div>
+            </div>
           </div>
-          <div class="stat-value">¥128.6万</div>
-          <div class="stat-change up">↑ 18.7% vs 上月</div>
+
+          <!-- Recent biz activity -->
+          <div class="panel">
+            <div class="panel-header"><h3>📋 业务动态</h3></div>
+            <div class="panel-body">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div style="padding:8px 10px;background:var(--bg-root);border-radius:4px;font-size:12px;"><span style="color:var(--green);">✓</span> 品牌方A 线索转化工作流完成 · 转化率5.2% · 2分钟前</div>
+                <div style="padding:8px 10px;background:var(--bg-root);border-radius:4px;font-size:12px;"><span style="color:var(--amber);">⚠</span> 品牌方B 线索转化率4.2%低于目标 · 华东区域异常 · 30分钟前</div>
+                <div style="padding:8px 10px;background:var(--bg-root);border-radius:4px;font-size:12px;"><span style="color:var(--accent);">📋</span> 品牌方C RaaS试点部署进度 80% · 预计7月15日上线 · 1小时前</div>
+                <div style="padding:8px 10px;background:var(--bg-root);border-radius:4px;font-size:12px;"><span style="color:var(--green);">💰</span> 品牌方A 本月RaaS费用 ¥18.6万确认 · 预算执行93% · 2小时前</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Agent health + recent activity -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <div class="panel">
-          <div class="panel-header"><h3>🧬 Agent 健康状态概览</h3></div>
-          <div class="panel-body">
-            <table class="data-table">
-              <thead><tr><th>Agent 名称</th><th>所属层</th><th>准确率</th><th>延迟</th><th>状态</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td>客服应答 Agent <span style="font-size:11px;color:var(--text-muted);">v2.3.1</span></td>
-                  <td><span class="tag green">执行层</span></td>
-                  <td>96.2%</td>
-                  <td>320ms</td>
-                  <td><span class="tag green">● 在线</span></td>
-                </tr>
-                <tr>
-                  <td>线索清洗 Agent <span style="font-size:11px;color:var(--text-muted);">v1.8.0</span></td>
-                  <td><span class="tag green">执行层</span></td>
-                  <td>93.7%</td>
-                  <td>480ms</td>
-                  <td><span class="tag green">● 在线</span></td>
-                </tr>
-                <tr>
-                  <td>内容生成 Agent <span style="font-size:11px;color:var(--text-muted);">v3.0.2</span></td>
-                  <td><span class="tag green">执行层</span></td>
-                  <td>91.5%</td>
-                  <td>1.2s</td>
-                  <td><span class="tag amber">● 降级</span></td>
-                </tr>
-                <tr>
-                  <td>营销策略 Agent <span style="font-size:11px;color:var(--text-muted);">v1.2.0</span></td>
-                  <td><span class="tag purple">策略层</span></td>
-                  <td>89.8%</td>
-                  <td>2.8s</td>
-                  <td><span class="tag green">● 在线</span></td>
-                </tr>
-                <tr>
-                  <td>合规审核 Agent <span style="font-size:11px;color:var(--text-muted);">v0.9.5</span></td>
-                  <td><span class="tag amber">审核层</span></td>
-                  <td>94.1%</td>
-                  <td>650ms</td>
-                  <td><span class="tag green">● 在线</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <!-- ═══════ DEV VIEW ═══════ -->
+      <div class="dash-panel" id="dash-dev">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">已注册 Agent</span><span class="stat-icon">🤖</span></div><div class="stat-value">24</div><div class="stat-change up">↑ 5 本月新增</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Agent 日均调用量</span><span class="stat-icon">⚡</span></div><div class="stat-value">187,632</div><div class="stat-change up">↑ 12.4% vs 昨日</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">Agent 自主完成率</span><span class="stat-icon">🎯</span></div><div class="stat-value">73.8%</div><div class="stat-change up">↑ 3.2% vs 上周</div></div>
+          <div class="stat-card"><div class="stat-header"><span class="stat-label">月均成本节省</span><span class="stat-icon">💰</span></div><div class="stat-value">¥128.6万</div><div class="stat-change up">↑ 18.7% vs 上月</div></div>
         </div>
 
-        <div class="panel">
-          <div class="panel-header"><h3>📋 最近 Agent 协作日志</h3></div>
-          <div class="panel-body">
-            <div style="display:flex;flex-direction:column;gap:12px;">
-              <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg-root);border-radius:6px;">
-                <span style="color:var(--green);font-size:16px;">✓</span>
-                <div style="flex:1;">
-                  <div style="font-weight:600;font-size:13px;">线索转化提升任务链完成</div>
-                  <div style="font-size:12px;color:var(--text-muted);">策略Agent → 内容Agent → KOC分发Agent → 线索培育Agent · 4 Agent协同</div>
-                  <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">2分钟前</div>
-                </div>
-                <span class="tag green">成功</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="panel">
+            <div class="panel-header"><h3>🧬 Agent 健康状态概览</h3></div>
+            <div class="panel-body" style="padding:0;">
+              <table class="data-table">
+                <thead><tr><th>Agent 名称</th><th>所属层</th><th>准确率</th><th>延迟</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td>客服应答 Agent <span style="font-size:10px;color:var(--text-muted);">v2.3.1</span></td><td><span class="tag green">执行层</span></td><td>96.2%</td><td>320ms</td><td><span class="tag green">● 在线</span></td></tr>
+                  <tr><td>线索清洗 Agent <span style="font-size:10px;color:var(--text-muted);">v1.8.0</span></td><td><span class="tag green">执行层</span></td><td>93.7%</td><td>480ms</td><td><span class="tag green">● 在线</span></td></tr>
+                  <tr><td>内容生成 Agent <span style="font-size:10px;color:var(--text-muted);">v3.0.2</span></td><td><span class="tag green">执行层</span></td><td>91.5%</td><td>1.2s</td><td><span class="tag amber">● 降级</span></td></tr>
+                  <tr><td>营销策略 Agent <span style="font-size:10px;color:var(--text-muted);">v1.2.0</span></td><td><span class="tag purple">策略层</span></td><td>89.8%</td><td>2.8s</td><td><span class="tag green">● 在线</span></td></tr>
+                  <tr><td>合规审核 Agent <span style="font-size:10px;color:var(--text-muted);">v0.9.5</span></td><td><span class="tag amber">审核层</span></td><td>94.1%</td><td>650ms</td><td><span class="tag green">● 在线</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><h3>📋 Agent 协作日志</h3></div>
+            <div class="panel-body">
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div style="padding:8px 10px;background:var(--bg-root);border-radius:4px;font-size:12px;"><span style="color:var(--green);">✓</span> 线索转化任务链 · 8Agent协同 · 3m24s · 2分钟前</div>
+                <div style="padding:8px 10px;background:var(--bg-root);border-radius:4px;font-size:12px;"><span style="color:var(--amber);">⚠</span> 内容生成Agent熔断 · 质量分82/100 · 18分钟前</div>
+                <div style="padding:8px 10px;background:var(--bg-root);border-radius:4px;font-size:12px;"><span style="color:var(--green);">✓</span> KOC运营报告自动生成 · 34分钟前</div>
+                <div style="padding:8px 10px;background:var(--bg-root);border-radius:4px;font-size:12px;"><span style="color:var(--accent);">🔄</span> 客服知识库增量训练 · 1小时前</div>
               </div>
-              <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg-root);border-radius:6px;">
-                <span style="color:var(--amber);font-size:16px;">⚠</span>
-                <div style="flex:1;">
-                  <div style="font-weight:600;font-size:13px;">内容生成 Agent 触发熔断</div>
-                  <div style="font-size:12px;color:var(--text-muted);">输出质量评分低于阈值 (82/100)，自动切换人工审核模式</div>
-                  <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">18分钟前</div>
-                </div>
-                <span class="tag amber">降级</span>
+            </div>
+          </div>
+
+          <!-- Model training status -->
+          <div class="panel">
+            <div class="panel-header"><h3>🧪 模型训练状态</h3></div>
+            <div class="panel-body" style="padding:0;">
+              <table class="data-table">
+                <thead><tr><th>实验</th><th>模型</th><th>状态</th><th>指标</th></tr></thead>
+                <tbody>
+                  <tr><td>EXP-386</td><td>客服意图识别 v2.3.1</td><td><span class="tag green">✓ 完成</span></td><td>准确率 96.2%</td></tr>
+                  <tr><td>EXP-385</td><td>线索评分模型</td><td><span class="tag amber">● 运行中</span></td><td>12/24 · 最佳93.7%</td></tr>
+                  <tr><td>EXP-384</td><td>内容安全对齐</td><td><span class="tag red">✗ 失败</span></td><td>安全通过率85.8%</td></tr>
+                  <tr><td>AUTO-012</td><td>数据漂移重训练</td><td><span class="tag blue">⏳ 排队中</span></td><td>触发: PSI>0.25</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- API & Token usage -->
+          <div class="panel">
+            <div class="panel-header"><h3>📊 API调用与Token消耗</h3></div>
+            <div class="panel-body">
+              <div style="display:flex;flex-direction:column;gap:10px;">
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>Claude Opus 4.8</span><span style="font-weight:700;">3,240万 Token · ¥22.7万</span></div><div class="progress-bar"><div class="progress-fill blue" style="width:43%;"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>DeepSeek V4-Pro</span><span style="font-weight:700;">3,850万 Token · ¥15.4万</span></div><div class="progress-bar"><div class="progress-fill green" style="width:51%;"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>Claude Sonnet 5</span><span style="font-weight:700;">1,120万 Token · ¥8.4万</span></div><div class="progress-bar"><div class="progress-fill purple" style="width:15%;"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>GPT-4.1</span><span style="font-weight:700;">320万 Token · ¥4.8万</span></div><div class="progress-bar"><div class="progress-fill amber" style="width:4%;"></div></div></div>
               </div>
-              <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg-root);border-radius:6px;">
-                <span style="color:var(--green);font-size:16px;">✓</span>
-                <div style="flex:1;">
-                  <div style="font-weight:600;font-size:13px;">KOC运营报告自动生成</div>
-                  <div style="font-size:12px;color:var(--text-muted);">KOC运营Agent → 效果评估Agent → 自动推送至品牌方看板</div>
-                  <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">34分钟前</div>
-                </div>
-                <span class="tag green">成功</span>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start;padding:10px;background:var(--bg-root);border-radius:6px;">
-                <span style="color:var(--accent);font-size:16px;">🔄</span>
-                <div style="flex:1;">
-                  <div style="font-weight:600;font-size:13px;">客服知识库增量训练</div>
-                  <div style="font-size:12px;color:var(--text-muted);">VOC分析Agent → 知识图谱Agent → 客服应答Agent 模型更新</div>
-                  <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">1小时前</div>
-                </div>
-                <span class="tag blue">进行中</span>
-              </div>
+              <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px;">本月Token总消耗: <strong>8,642万</strong> · 总费用: <strong>¥52.8万</strong></div>
             </div>
           </div>
         </div>
@@ -6182,6 +6263,7 @@ body{
               <span class="sched-task">竞品监控日报推送</span>
               <span class="sched-agent">🔭 竞品监控Agent</span>
             </div>
+            <div style="padding:8px 14px;font-size:11px;color:var(--accent-light);cursor:pointer;" onclick="openAutoTaskModal()">+ 新建自动任务</div>
           </div>
         </div>
 
@@ -6318,6 +6400,169 @@ body{
         </div>
       </div>
     </section>
+
+    <!-- ═══════════════ TASK CENTER ═══════════════ -->
+    <section class="content-section" id="tab-task-center">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <span style="font-weight:700;font-size:16px;">📋 任务中心</span>
+        <span style="font-size:12px;color:var(--text-muted);">任务创建·分发·管理 · 支持人类员工和数字Agent协作</span>
+        <select style="margin-left:auto;padding:6px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:12px;">
+          <option>全部任务</option><option>我的任务</option><option>我创建的</option><option>我分发的</option>
+        </select>
+        <button class="btn primary" style="font-size:12px;" onclick="openTaskCreate()">+ 创建任务</button>
+      </div>
+
+      <div class="dp-tabs">
+        <div class="dp-tab active" data-dp="tc-kanban">📋 看板视图</div>
+        <div class="dp-tab" data-dp="tc-list">📃 列表视图</div>
+      </div>
+
+      <!-- Kanban view -->
+      <div class="dp-panel active" id="tc-kanban">
+        <div class="task-kanban">
+          <!-- Todo -->
+          <div class="task-col">
+            <h4>📥 待处理 <span>4</span></h4>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-014','华南线索转化率根因分析','P0','待处理','线索诊断Agent','赵志强','2026-07-15','分析华南区域线索到店率连续3天低于全国均值15%的根因，2h内完成')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p0"></span><span class="tc-title">华南线索转化率根因分析</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee agent">🤖 线索诊断Agent</span><span>⏰ 2小时</span></div>
+            </div>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-013','N7试驾链路优化方案输出','P1','待处理','营销策略Agent','李明远','2026-07-15','基于用户画像和竞品对标，输出N7试驾预约链路优化方案，含3个改进方向')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p1"></span><span class="tc-title">N7试驾链路优化方案</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee agent">🤖 营销策略Agent</span><span>⏰ 16:00前</span></div>
+            </div>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-012','客服对话质量抽查(50条)','P2','待处理','客服应答Agent','王晓芳','2026-07-15','随机抽样昨日50条客服对话，人工审核Agent应答质量，标记badcase')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p2"></span><span class="tc-title">客服对话质量抽查(50条)</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee human">👤 王晓芳</span><span>⏰ 今日</span></div>
+            </div>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-011','标注对抗性Prompt样本200条','P2','待处理','训练数据工厂','陈思敏','2026-07-15','完成对抗性Prompt注入样本标注，用于内容生成Agent安全加固训练')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p2"></span><span class="tc-title">标注对抗性Prompt样本200条</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee human">👤 陈思敏</span><span>⏰ 今日</span></div>
+            </div>
+          </div>
+
+          <!-- In Progress -->
+          <div class="task-col">
+            <h4>⚡ 进行中 <span style="color:var(--accent-light);">3</span></h4>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-010','Q3线索转化提升方案审批','P0','进行中','营销策略Agent','李明远','2026-07-14','审核营销策略Agent生成的Q3方案，确认三大策略方向，批准执行')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p0"></span><span class="tc-title">Q3线索转化提升方案审批</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee human">👤 李明远</span><span style="color:var(--accent-light);">进度 70%</span></div>
+            </div>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-009','内容Agent v3.0.3 8个失败用例修复','P1','进行中','Agent测试沙箱','陈思敏','2026-07-14','修复预发布测试中发现的8个失败用例：6个Prompt注入+2个平台适配问题')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p1"></span><span class="tc-title">内容Agent v3.0.3 用例修复</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee human">👤 陈思敏</span><span style="color:var(--accent-light);">进度 45%</span></div>
+            </div>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-008','知识库全量重索引','P2','进行中','知识库RAG','系统自动','2026-07-14','触发2,340篇文档全量重索引，升级向量嵌入模型，恢复检索命中率至89.3%')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p2"></span><span class="tc-title">知识库全量重索引</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee agent">🤖 系统自动</span><span style="color:var(--accent-light);">进度 78%</span></div>
+            </div>
+          </div>
+
+          <!-- Review -->
+          <div class="task-col">
+            <h4>🔍 待审核 <span style="color:var(--amber);">2</span></h4>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-007','Token销售定价方案','P1','待审核','营销策略Agent','张伟国','2026-07-13','三层Token套餐定价方案：基础版(含SaaS)/专业版(按量)/企业版(包月)，需CEO审批')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p1"></span><span class="tc-title">Token销售定价方案</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee human">👤 张伟国 审批</span><span>⏰ 今日</span></div>
+            </div>
+            <div class="task-card-item" onclick="openTaskDetail('TASK-006','新增N7城市NOA功能文档3篇','P2','待审核','知识库','王晓芳','2026-07-14','陈思敏提交3篇N7城市NOA功能文档，需业务负责人审核内容准确性')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p2"></span><span class="tc-title">N7城市NOA文档审核</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee human">👤 王晓芳 审核</span><span>⏰ 今日</span></div>
+            </div>
+          </div>
+
+          <!-- Done -->
+          <div class="task-col">
+            <h4>✅ 已完成 <span style="color:var(--green);">6</span></h4>
+            <div class="task-card-item" style="opacity:0.75;" onclick="openTaskDetail('TASK-005','品牌方A晨间数据同步','P2','已完成','数据同步Agent','系统自动','2026-07-15','完成品牌方A/B/C数据同步，耗时2m10s')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p2"></span><span class="tc-title">品牌方A晨间数据同步 ✓</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee agent">🤖 数据同步Agent</span><span style="color:var(--green);">2m10s</span></div>
+            </div>
+            <div class="task-card-item" style="opacity:0.75;" onclick="openTaskDetail('TASK-004','线索转化工作流执行','P1','已完成','8 Agent协同','系统自动','2026-07-15','每日09:15定时触发，8Agent协同完成，耗时3m24s')">
+              <div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority p1"></span><span class="tc-title">线索转化工作流执行 ✓</span></div>
+              <div class="tc-meta" style="margin-top:4px;"><span class="tc-assignee agent">🤖 8 Agent协同</span><span style="color:var(--green);">3m24s</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- List view -->
+      <div class="dp-panel" id="tc-list">
+        <div class="panel" style="margin-bottom:0;">
+          <div class="panel-body" style="padding:0;">
+            <table class="data-table">
+              <thead><tr><th>编号</th><th>任务名称</th><th>优先级</th><th>状态</th><th>指派人</th><th>创建者</th><th>截止时间</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr class="clickable" onclick="openTaskDetail('TASK-014','华南线索转化率根因分析','P0','待处理','线索诊断Agent','赵志强','2026-07-15','')"><td>TASK-014</td><td><strong>华南线索转化率根因分析</strong></td><td><span class="tag red">P0</span></td><td><span class="tag red">待处理</span></td><td><span class="tc-assignee agent">🤖 线索诊断Agent</span></td><td>赵志强</td><td>2小时内</td><td><a href="#" style="color:var(--accent-light);font-size:11px;">详情</a></td></tr>
+                <tr class="clickable" onclick="openTaskDetail('TASK-010','Q3线索转化提升方案审批','P0','进行中','营销策略Agent','李明远','2026-07-14','')"><td>TASK-010</td><td><strong>Q3线索转化提升方案审批</strong></td><td><span class="tag red">P0</span></td><td><span class="tag blue">进行中</span></td><td><span class="tc-assignee human">👤 李明远</span></td><td>系统自动</td><td>今日</td><td><a href="#" style="color:var(--accent-light);font-size:11px;">详情</a></td></tr>
+                <tr class="clickable" onclick="openTaskDetail('TASK-013','N7试驾链路优化方案输出','P1','待处理','营销策略Agent','李明远','2026-07-15','')"><td>TASK-013</td><td><strong>N7试驾链路优化方案</strong></td><td><span class="tag amber">P1</span></td><td><span class="tag red">待处理</span></td><td><span class="tc-assignee agent">🤖 营销策略Agent</span></td><td>李明远</td><td>16:00</td><td><a href="#" style="color:var(--accent-light);font-size:11px;">详情</a></td></tr>
+                <tr class="clickable" onclick="openTaskDetail('TASK-012','客服对话质量抽查(50条)','P2','待处理','客服应答Agent','王晓芳','2026-07-15','')"><td>TASK-012</td><td><strong>客服对话质量抽查(50条)</strong></td><td><span class="tag blue">P2</span></td><td><span class="tag red">待处理</span></td><td><span class="tc-assignee human">👤 王晓芳</span></td><td>王晓芳</td><td>今日</td><td><a href="#" style="color:var(--accent-light);font-size:11px;">详情</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ AUTO TASK CREATE MODAL ═══════════════ -->
+<div class="modal-overlay" id="autoTaskModal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header"><h3>⏰ 新建自动任务</h3><button class="modal-close" onclick="closeAutoTaskModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>任务名称 *</label><input id="autoTaskName" placeholder="例如：每日线索转化报告自动生成"></div>
+      <div class="form-row">
+        <div class="form-group"><label>触发类型</label><select id="autoTaskTrigger" onchange="toggleTriggerConfig()"><option>定时触发</option><option>事件驱动</option><option>Cron表达式</option></select></div>
+        <div class="form-group"><label id="triggerTimeLabel">执行时间</label><input id="autoTaskTime" type="time" value="09:00"></div>
+      </div>
+      <div id="cronConfig" style="display:none;" class="form-group"><label>Cron表达式</label><input id="autoTaskCron" placeholder="0 9 * * * (每天9点)"></div>
+      <div id="eventConfig" style="display:none;" class="form-group"><label>触发事件</label><select id="autoTaskEvent"><option>数据源更新完成</option><option>Agent运行异常</option><option>SLA指标低于阈值</option><option>新线索到达(>100条)</option><option>竞品动态更新</option></select></div>
+      <div class="form-group"><label>执行Agent *</label><select id="autoTaskAgent"><option>营销策略Agent</option><option>内容生成Agent</option><option>线索诊断Agent</option><option>线索培育Agent</option><option>KOC运营Agent</option><option>客服应答Agent</option><option>VOC分析Agent</option><option>效果评估Agent</option><option>竞品监控Agent</option><option>数据同步Agent</option></select></div>
+      <div class="form-group"><label>执行频率</label><select id="autoTaskFreq"><option>每天一次</option><option>每周一次(周一)</option><option>每周一次(周五)</option><option>每月一次(首日)</option><option>每小时一次</option></select></div>
+      <div class="form-row">
+        <div class="form-group"><label>通知方式</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+            <label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox" checked> 企微消息</label>
+            <label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox"> 邮件</label>
+            <label style="font-size:11px;display:flex;align-items:center;gap:4px;"><input type="checkbox"> 平台通知</label>
+          </div>
+        </div>
+        <div class="form-group"><label>通知对象</label><select id="autoTaskNotify"><option>任务创建者</option><option>李明远</option><option>全部业务负责人</option><option>指定人员</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>失败重试</label><select id="autoTaskRetry"><option>不重试</option><option>重试1次</option><option>重试3次</option></select></div>
+        <div class="form-group"><label>超时时间</label><select id="autoTaskTimeout"><option>10分钟</option><option>30分钟</option><option>1小时</option><option>2小时</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeAutoTaskModal()">取消</button>
+      <button class="btn primary" onclick="submitAutoTask()">创建自动任务</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TASK CREATE MODAL ═══════════════ -->
+    <div class="modal-overlay" id="taskCreateModal">
+      <div class="modal" style="width:560px;">
+        <div class="modal-header"><h3>📋 创建任务</h3><button class="modal-close" onclick="closeTaskCreate()">✕</button></div>
+        <div class="modal-body">
+          <div class="form-group"><label>任务名称 *</label><input id="taskName" placeholder="输入任务名称..."></div>
+          <div class="form-row">
+            <div class="form-group"><label>优先级</label><select id="taskPriority"><option>P2 普通</option><option>P1 重要</option><option>P0 紧急</option></select></div>
+            <div class="form-group"><label>截止时间</label><input id="taskDeadline" type="datetime-local"></div>
+          </div>
+          <div class="form-group"><label>任务描述</label><textarea id="taskDesc" rows="3" placeholder="描述任务的详细内容和验收标准..." style="width:100%;padding:8px;background:var(--bg-root);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:12px;"></textarea></div>
+          <div class="form-row">
+            <div class="form-group"><label>指派对象类型</label><select id="taskAssignType" onchange="toggleTaskAssignee()"><option>人类员工</option><option>数字Agent</option></select></div>
+            <div class="form-group"><label>指派给</label><select id="taskAssignee"><option>李明远</option><option>张伟国</option><option>王晓芳</option><option>赵志强</option><option>陈思敏</option></select></div>
+          </div>
+          <div class="form-group"><label>关联项目（可选）</label><select id="taskProject"><option>无关联项目</option><option>Q3线索转化提升</option><option>N7新车上市营销</option><option>商城双十一大促</option><option>AI客服质量优化</option></select></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeTaskCreate()">取消</button>
+          <button class="btn primary" onclick="submitTask()">创建任务</button>
+        </div>
+      </div>
+    </div>
 
   </div><!-- /.content -->
 </div><!-- /.main -->
@@ -6480,12 +6725,92 @@ body{
 </div>
 
 <script>
+// ── Version Switching ──
+var versionModules = {
+  v1: ['dashboard','agents','dynamic-plan','skills','tools','prompts','knowledge-base','admin','permissions'],
+  v2: ['dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','ai-org','position-ai'],
+  v3: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','ai-org','position-ai'],
+  v4: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','delivery','ai-org','position-ai','agent-testing','ticket-system'],
+  v5: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','delivery','ai-org','position-ai','agent-testing','ticket-system','mf-data-factory','mf-experiment','mf-model-registry','mf-feature-store','mf-model-monitor','mf-pipeline'],
+  v6: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','delivery','ai-org','position-ai','agent-testing','ticket-system','mf-data-factory','mf-experiment','mf-model-registry','mf-feature-store','mf-model-monitor','mf-pipeline','data-methodology','evolution'],
+  v7: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','delivery','ai-org','position-ai','agent-testing','ticket-system','mf-data-factory','mf-experiment','mf-model-registry','mf-feature-store','mf-model-monitor','mf-pipeline','data-methodology','evolution','mkt-agent-market','mkt-dr','mkt-ethics','mkt-tenant','analytics','security','knowledge']
+};
+
+function switchVersion(ver) {
+  // Hide all nav items
+  document.querySelectorAll('.nav-item[data-tab]').forEach(function(item) { item.style.display = 'none'; });
+  // Show only modules for this version
+  var modules = versionModules[ver] || versionModules.v7;
+  modules.forEach(function(tab) {
+    var item = document.querySelector('.nav-item[data-tab="'+tab+'"]');
+    if (item) item.style.display = 'flex';
+  });
+  // Hide empty nav-sections and titles
+  document.querySelectorAll('.nav-section').forEach(function(section) {
+    var items = section.querySelectorAll('.nav-item[data-tab]');
+    var anyVisible = false;
+    items.forEach(function(item) { if (item.style.display !== 'none') anyVisible = true; });
+    section.style.display = anyVisible ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-section-title').forEach(function(title) {
+    var section = title.parentElement;
+    var items = section.querySelectorAll('.nav-item[data-tab]');
+    var anyVisible = false;
+    items.forEach(function(item) { if (item.style.display !== 'none') anyVisible = true; });
+    title.style.display = anyVisible ? 'block' : 'none';
+  });
+  // v1.0: hide business perspective, show only dev view
+  var switcher = document.querySelector('.dash-perspective-btn');
+  var bizView = document.getElementById('dash-biz');
+  var devView = document.getElementById('dash-dev');
+  var perspRow = document.querySelector('#tab-dashboard > div:first-child');
+  if (ver === 'v1') {
+    // Hide perspective switcher row
+    if (perspRow && perspRow.querySelector('.dash-perspective-btn')) perspRow.style.display = 'none';
+    // Show dev view, hide biz view
+    if (bizView) bizView.classList.remove('active');
+    if (devView) devView.classList.add('active');
+  } else {
+    // Show perspective switcher row, default to biz view
+    if (perspRow) perspRow.style.display = 'flex';
+    if (bizView) bizView.classList.add('active');
+    if (devView) devView.classList.remove('active');
+    // Reset perspective buttons
+    var btns = document.querySelectorAll('.dash-perspective-btn');
+    btns.forEach(function(b, i) {
+      b.classList.remove('active'); b.style.background='transparent'; b.style.color='var(--text-secondary)';
+      if (i === 0) { b.classList.add('active'); b.style.background='var(--accent)'; b.style.color='#fff'; }
+    });
+  }
+  // Navigate to dashboard
+  var dashNav = document.querySelector('.nav-item[data-tab="dashboard"]');
+  if (dashNav) dashNav.click();
+  document.getElementById('pageTitle').textContent = '📊 运营仪表盘 — AIMP ' + ver.toUpperCase().replace('V','v');
+  showToast('已切换到 AIMP ' + ver.toUpperCase().replace('V','v'), 'info');
+}
+
+// ── Dashboard perspective switching ──
+function switchDashPerspective(p, btn) {
+  document.querySelectorAll('.dash-perspective-btn').forEach(function(b) {
+    b.classList.remove('active'); b.style.background='transparent'; b.style.color='var(--text-secondary)';
+  });
+  btn.classList.add('active'); btn.style.background='var(--accent)'; btn.style.color='#fff';
+  document.querySelectorAll('.dash-panel').forEach(function(pn) { pn.classList.remove('active'); });
+  document.getElementById('dash-'+p).classList.add('active');
+}
+// Init perspective button styles
+document.addEventListener('DOMContentLoaded', function() {
+  var activeBtn = document.querySelector('.dash-perspective-btn.active');
+  if (activeBtn) { activeBtn.style.background = 'var(--accent)'; activeBtn.style.color = '#fff'; }
+});
+
 // ── Tab switching ──
 const navItems = document.querySelectorAll('.nav-item[data-tab]');
 const sections = document.querySelectorAll('.content-section');
 const pageTitle = document.getElementById('pageTitle');
 const tabTitles = {
   workspace: '💬 工作空间 — 对话 · 项目 · 插件',
+  'task-center': '📋 任务中心 — 创建·分发·管理',
   dashboard: '📊 运营仪表盘',
   agents: '🤖 Agent 注册中心',
   orchestration: '🔗 Agent 编排引擎',
@@ -6541,6 +6866,105 @@ function closeNewAgentModal() {
 document.getElementById('newAgentModal').addEventListener('click', function(e) {
   if (e.target === this) closeNewAgentModal();
 });
+
+// ── Auto Task Modal ──
+function openAutoTaskModal() { document.getElementById('autoTaskModal').classList.add('show'); }
+function closeAutoTaskModal() { document.getElementById('autoTaskModal').classList.remove('show'); }
+document.getElementById('autoTaskModal').addEventListener('click', function(e) { if (e.target === this) closeAutoTaskModal(); });
+
+function toggleTriggerConfig() {
+  var type = document.getElementById('autoTaskTrigger').value;
+  document.getElementById('cronConfig').style.display = type === 'Cron表达式' ? 'block' : 'none';
+  document.getElementById('eventConfig').style.display = type === '事件驱动' ? 'block' : 'none';
+  document.getElementById('triggerTimeLabel').textContent = type === 'Cron表达式' ? 'Cron表达式' : type === '事件驱动' ? '触发事件' : '执行时间';
+  document.getElementById('autoTaskTime').style.display = type === 'Cron表达式' ? 'none' : 'block';
+}
+
+function submitAutoTask() {
+  var name = document.getElementById('autoTaskName').value.trim();
+  if (!name) { showToast('请输入任务名称', 'warn'); return; }
+  var time = document.getElementById('autoTaskTime').value || '09:00';
+  var agent = document.getElementById('autoTaskAgent').value;
+  var trigger = document.getElementById('autoTaskTrigger').value;
+  var timeLabel = trigger === '事件驱动' ? '事件触发' : time;
+
+  // Add to scheduled tasks list
+  var section = document.querySelector('.ws-sidebar-section:last-of-type');
+  var addBtn = section.querySelector('div[onclick]');
+  var item = document.createElement('div');
+  item.className = 'sched-item';
+  item.style.borderColor = 'var(--green)';
+  item.innerHTML = '<span class="sched-time">'+timeLabel+'</span><span class="sched-task">'+name+'</span><span class="sched-agent">🤖 '+agent+'</span>';
+  item.style.cursor = 'pointer';
+  item.addEventListener('click', function() {
+    openDrillPanel('⏰ '+name,
+      '<div class="drill-section"><div class="drill-section-title">自动任务详情</div>'+
+      '<div class="task-detail-row"><span class="td-label">任务名称</span><span class="td-val">'+name+'</span></div>'+
+      '<div class="task-detail-row"><span class="td-label">触发方式</span><span class="td-val">'+trigger+' · '+timeLabel+'</span></div>'+
+      '<div class="task-detail-row"><span class="td-label">执行Agent</span><span class="td-val">'+agent+'</span></div>'+
+      '<div class="task-detail-row"><span class="td-label">状态</span><span class="td-val"><span class="tag green">● 已启用</span></span></div></div>'+
+      '<div class="drill-section"><button class="btn primary" style="width:48%;">▶ 立即执行</button><button class="btn" style="width:48%;" onclick="showToast(\'任务已暂停\',\'info\')">⏸ 暂停</button></div>');
+  });
+  section.insertBefore(item, addBtn);
+
+  closeAutoTaskModal();
+  document.getElementById('autoTaskName').value = '';
+  showToast('自动任务 "'+name+'" 已创建', 'success');
+  setTimeout(function() { item.style.borderColor = 'var(--border-light)'; }, 3000);
+}
+
+// ── Task Center ──
+function openTaskCreate() { document.getElementById('taskCreateModal').classList.add('show'); }
+function closeTaskCreate() { document.getElementById('taskCreateModal').classList.remove('show'); }
+document.getElementById('taskCreateModal').addEventListener('click', function(e) { if (e.target === this) closeTaskCreate(); });
+
+function submitTask() {
+  var name = document.getElementById('taskName').value.trim();
+  if (!name) { showToast('请输入任务名称', 'warn'); return; }
+  var pri = document.getElementById('taskPriority').value;
+  var priClass = pri.includes('P0') ? 'p0' : pri.includes('P1') ? 'p1' : 'p2';
+  var priTag = pri.includes('P0') ? 'red' : pri.includes('P1') ? 'amber' : 'blue';
+  var assignee = document.getElementById('taskAssignee').value;
+  var assignType = document.getElementById('taskAssignType').value;
+  var assigneeTag = assignType === '数字Agent' ? '<span class="tc-assignee agent">🤖 '+assignee+'</span>' : '<span class="tc-assignee human">👤 '+assignee+'</span>';
+  // Add to kanban todo column
+  var todoCol = document.querySelector('#tc-kanban .task-col:first-child');
+  if (todoCol) {
+    var card = document.createElement('div');
+    card.className = 'task-card-item';
+    card.style.borderColor = 'var(--green)';
+    card.innerHTML = '<div style="display:flex;align-items:center;gap:8px;"><span class="tc-priority '+priClass+'"></span><span class="tc-title">'+name+'</span></div><div class="tc-meta" style="margin-top:4px;">'+assigneeTag+'<span>⏰ 今日</span></div>';
+    todoCol.appendChild(card);
+    // Update count
+    var h4 = todoCol.querySelector('h4');
+    if (h4) { var count = parseInt(h4.querySelector('span').textContent) + 1; h4.querySelector('span').textContent = count; }
+  }
+  closeTaskCreate();
+  document.getElementById('taskName').value = '';
+  showToast('任务 "'+name+'" 已创建并分配', 'success');
+}
+function toggleTaskAssignee() {
+  var type = document.getElementById('taskAssignType').value;
+  var sel = document.getElementById('taskAssignee');
+  sel.innerHTML = type === '数字Agent' ?
+    '<option>营销策略Agent</option><option>内容生成Agent</option><option>线索诊断Agent</option><option>线索培育Agent</option><option>KOC运营Agent</option><option>客服应答Agent</option><option>数据同步Agent</option>' :
+    '<option>李明远</option><option>张伟国</option><option>王晓芳</option><option>赵志强</option><option>陈思敏</option>';
+}
+
+function openTaskDetail(id, name, pri, status, assignee, creator, deadline, desc) {
+  var html = '<div class="drill-section"><div class="drill-section-title">任务详情</div>';
+  html += '<div class="drill-kpi-row"><div class="drill-kpi"><div class="dk-val" style="color:'+(pri==='P0'?'var(--red)':pri==='P1'?'var(--amber)':'var(--accent-light)')+';">'+pri+'</div><div class="dk-label">优先级</div></div><div class="drill-kpi"><div class="dk-val">'+status+'</div><div class="dk-label">状态</div></div><div class="drill-kpi"><div class="dk-val">'+id+'</div><div class="dk-label">编号</div></div></div>';
+  html += '<div class="task-detail-row"><span class="td-label">任务名称</span><span class="td-val">'+name+'</span></div>';
+  html += '<div class="task-detail-row"><span class="td-label">指派人</span><span class="td-val">'+assignee+'</span></div>';
+  html += '<div class="task-detail-row"><span class="td-label">创建者</span><span class="td-val">'+creator+'</span></div>';
+  html += '<div class="task-detail-row"><span class="td-label">截止时间</span><span class="td-val">'+deadline+'</span></div>';
+  html += '<div class="task-detail-row"><span class="td-label">描述</span><span class="td-val" style="font-size:11px;">'+desc+'</span></div></div>';
+  html += '<div class="drill-section"><div class="drill-section-title">处理记录</div><div class="task-timeline"><div class="tt-item"><span class="tt-time">10:30</span><span class="tt-desc">任务创建 · '+creator+'</span></div>';
+  if (status !== '待处理') html += '<div class="tt-item"><span class="tt-time">10:45</span><span class="tt-desc">开始处理 · '+assignee+'</span></div>';
+  html += '</div></div>';
+  html += '<div class="drill-section"><button class="btn primary" style="width:48%;">▶ 开始处理</button><button class="btn" style="width:48%;" onclick="showToast(\'任务已重新分配\',\'info\')">↩ 重新分配</button></div>';
+  openDrillPanel('📋 '+id, html);
+}
 
 // ── New Delivery Modal ──
 function openNewDelivery() {
@@ -6767,7 +7191,7 @@ document.querySelectorAll('.canvas-node').forEach(node => {
 });
 
 console.log('🚀 AIMP 统一AI管控平台 v5.0 已就绪 · 工作空间模块已上线');
-console.log('   全部模块(32): 工作空间(1) | Agent管理(3) | 能力工厂(4) | AI产品(2) | AI组织(2) | 平台管理(2) | 客户门户(1) | 质量保障(2) | 模型工厂(6) | 数据引擎(1) | 进化引擎(1) | 生态与治理(4) | 治理与分析(3)');
+console.log('   全部模块(33): 工作空间(1) | 任务中心(1) | Agent管理(3) | 能力工厂(4) | AI产品(2) | AI组织(2) | 平台管理(2) | 客户门户(1) | 质量保障(2) | 模型工厂(6) | 数据引擎(1) | 进化引擎(1) | 生态与治理(4) | 治理与分析(3)');
 console.log('   在册Agent: 24  |  Skill: 32  |  Tool: 18  |  Prompt: 186  |  知识文档: 2,340');
 
 // ── Universal Drill-down Panel ──

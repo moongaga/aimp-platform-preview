@@ -1226,13 +1226,13 @@ body{
       <div class="logo-text" style="font-size:14px;">AIMP<span> 管控平台</span></div>
     </div>
     <select id="versionSwitcher" onchange="switchVersion(this.value)" style="width:100%;padding:5px 8px;background:var(--bg-root);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:11px;cursor:pointer;">
-      <option value="v1">AIMP v1.0</option>
-      <option value="v2">AIMP v2.0</option>
-      <option value="v3">AIMP v3.0</option>
-      <option value="v4">AIMP v4.0</option>
-      <option value="v5">AIMP v5.0</option>
-      <option value="v6">AIMP v6.0</option>
-      <option value="v7" selected>AIMP v7.0</option>
+      <option value="v1">AIMP v1.0 · 2026.09.20</option>
+      <option value="v2">AIMP v2.0 · 2026.11.20</option>
+      <option value="v3">AIMP v3.0 · 2026.12.20</option>
+      <option value="v4">AIMP v4.0 · 2027.02.20</option>
+      <option value="v5">AIMP v5.0 · 2027.04.20</option>
+      <option value="v6">AIMP v6.0 · 2027.06.20</option>
+      <option value="v7" selected>AIMP v7.0 · 2027.08.20</option>
     </select>
   </div>
   <nav class="sidebar-nav">
@@ -6727,8 +6727,8 @@ body{
 <script>
 // ── Version Switching ──
 var versionModules = {
-  v1: ['dashboard','agents','dynamic-plan','skills','tools','prompts','knowledge-base','admin','permissions'],
-  v2: ['dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','ai-org','position-ai'],
+  v1: ['workspace','task-center','dashboard','agents','dynamic-plan','skills','tools','prompts','knowledge-base','admin','permissions'],
+  v2: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','ai-org','position-ai'],
   v3: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','ai-org','position-ai'],
   v4: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','delivery','ai-org','position-ai','agent-testing','ticket-system'],
   v5: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','delivery','ai-org','position-ai','agent-testing','ticket-system','mf-data-factory','mf-experiment','mf-model-registry','mf-feature-store','mf-model-monitor','mf-pipeline'],
@@ -6736,14 +6736,41 @@ var versionModules = {
   v7: ['workspace','task-center','dashboard','agents','orchestration','dynamic-plan','skills','tools','prompts','knowledge-base','ai-products','delivery','ai-org','position-ai','agent-testing','ticket-system','mf-data-factory','mf-experiment','mf-model-registry','mf-feature-store','mf-model-monitor','mf-pipeline','data-methodology','evolution','mkt-agent-market','mkt-dr','mkt-ethics','mkt-tenant','analytics','security','knowledge']
 };
 
+var versionOrder = ['v1','v2','v3','v4','v5','v6','v7'];
+
 function switchVersion(ver) {
+  // Clear all existing NEW badges (both dynamically added and static)
+  document.querySelectorAll('.nav-item .badge.new-badge').forEach(function(b) { b.remove(); });
+  document.querySelectorAll('.nav-item .badge.hot').forEach(function(b) { b.remove(); });
+
+  // Determine which modules are new vs previous version
+  var idx = versionOrder.indexOf(ver);
+  var newModules = [];
+  if (idx > 0) {
+    var prevModules = versionModules[versionOrder[idx-1]] || [];
+    var curModules = versionModules[ver] || [];
+    newModules = curModules.filter(function(m) { return prevModules.indexOf(m) === -1; });
+  }
+
   // Hide all nav items
   document.querySelectorAll('.nav-item[data-tab]').forEach(function(item) { item.style.display = 'none'; });
   // Show only modules for this version
   var modules = versionModules[ver] || versionModules.v7;
   modules.forEach(function(tab) {
     var item = document.querySelector('.nav-item[data-tab="'+tab+'"]');
-    if (item) item.style.display = 'flex';
+    if (item) {
+      item.style.display = 'flex';
+      // Add NEW badge for newly added modules
+      if (newModules.indexOf(tab) !== -1) {
+        var existingNew = item.querySelector('.badge.new-badge, .badge.hot');
+        if (existingNew) existingNew.remove();
+        var badge = document.createElement('span');
+        badge.className = 'badge hot new-badge';
+        badge.textContent = 'NEW';
+        badge.style.background = 'var(--red-bg)'; badge.style.color = 'var(--red)';
+        item.appendChild(badge);
+      }
+    }
   });
   // Hide empty nav-sections and titles
   document.querySelectorAll('.nav-section').forEach(function(section) {
